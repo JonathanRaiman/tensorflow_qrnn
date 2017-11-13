@@ -1,0 +1,13 @@
+---
+project: tf_qrnn
+library: qrnn
+name: RecurrentForgetMult
+inputs:
+  - ["x: FT", [null, null, null]]
+  - ["forget: FT", [null, null, null]]
+outputs:
+  - ["output: FT", [null, null, null]]
+type_attrs:
+  - "FT: {float} = DT_FLOAT"
+other_attrs: []
+doc: "QRNN nonlinearity."
