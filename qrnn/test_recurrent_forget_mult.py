@@ -40,7 +40,7 @@ class TestRecurrentForgetMult(unittest.TestCase):
         # Argument list
         np_args = [x, forget]
         # Argument string name list
-        arg_names = ['x', 'forget']
+        arg_names = ["x", "forget"]
         # Constructor tensorflow variables
         tf_args = [tf.Variable(v, name=n) for v, n in zip(np_args, arg_names)]
 
@@ -50,7 +50,7 @@ class TestRecurrentForgetMult(unittest.TestCase):
                 return self.qrnn.recurrent_forget_mult(*tf_args)
 
         # Pin operation to CPU
-        cpu_op = _pin_op('/cpu:0', *tf_args)
+        cpu_op = _pin_op("/cpu:0", *tf_args)
 
         # Run the op on all GPUs
         gpu_ops = [_pin_op(d, *tf_args) for d in self.gpu_devs]
