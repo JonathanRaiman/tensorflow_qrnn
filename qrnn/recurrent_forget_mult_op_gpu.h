@@ -37,7 +37,7 @@ public:
         // Allocate output tensors
         // Allocate space for output tensor 'output'
         tf::Tensor * output_ptr = nullptr;
-        tf::TensorShape output_shape = tf::TensorShape({ 1, 1, 1 });
+        tf::TensorShape output_shape = in_x.shape();
         OP_REQUIRES_OK(context, context->allocate_output(
             0, output_shape, &output_ptr));
 

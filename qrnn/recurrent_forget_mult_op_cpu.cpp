@@ -29,21 +29,15 @@ auto shape_function = [](InferenceContext* c) {
         "forget must have shape [None, None, None] but is " +
         c->DebugString(in_forget));
 
-
-
     // TODO: Supply a proper shapes for output variables here,
     // usually derived from input shapes
-    // ShapeHandle output_1 = c->MakeShape({
-    //      c->Dim(input_1, 0),  // input_1 dimension 0
-    //      c->Dim(input_2, 1)}); // input_2 dimension 1""")
+    ShapeHandle output_shape = c->MakeShape({
+         c->Dim(in_x, 0),
+         c->Dim(in_x, 1),
+         c->Dim(in_x, 2)});
 
-    ShapeHandle out_output = c->MakeShape({ 1, 1, 1 });
-
-    c->set_output(0, out_output);
-
-
-    // printf("output shape %s\\n", c->DebugString(out).c_str());;
-
+    c->set_output(0, output_shape);
+    // printf("output shape %s\\n", c->DebugString(output_shape).c_str());;
     return Status::OK();
 };
 

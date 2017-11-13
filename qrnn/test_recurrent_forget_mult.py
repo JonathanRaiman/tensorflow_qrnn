@@ -29,8 +29,12 @@ class TestRecurrentForgetMult(unittest.TestCase):
     def _impl_test_recurrent_forget_mult(self, FT):
         """ Implementation of the RecurrentForgetMult operator test """
         # Create input variables
-        x = np.random.random(size=[1, 1, 1]).astype(FT)
-        forget = np.random.random(size=[1, 1, 1]).astype(FT)
+        timesteps = 20
+        batch_size = 32
+        channels = 128
+        shape = (timesteps, batch_size, channels)
+        x = np.random.random(size=shape).astype(FT)
+        forget = np.random.random(size=shape).astype(FT)
 
 
         # Argument list
@@ -56,8 +60,12 @@ class TestRecurrentForgetMult(unittest.TestCase):
 
         with tf.Session() as S:
             S.run(init_op)
-            S.run(cpu_op)
-            S.run(gpu_ops)
+            cpu_result = S.run(cpu_op)
+            self.assertEqual(cpu_result.shape, shape)
+            gpu_results = S.run(gpu_ops)
+            for gpu_result in gpu_results:
+                self.assertEqual(gpu_result.shape, shape)
+
 
 if __name__ == "__main__":
     unittest.main()
