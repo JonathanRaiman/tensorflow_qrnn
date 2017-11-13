@@ -54,7 +54,8 @@ public:
         RecurrentForgetMultLauncher(fout_output, fin_forget, fin_x,
                                     output_shape.dim_size(0),
                                     output_shape.dim_size(1),
-                                    output_shape.dim_size(2));
+                                    output_shape.dim_size(2),
+                                    device.stream());
     }
 };
 

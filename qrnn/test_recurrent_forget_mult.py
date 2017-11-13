@@ -28,8 +28,6 @@ class TestRecurrentForgetMult(unittest.TestCase):
 
     def _impl_test_recurrent_forget_mult(self, FT):
         """ Implementation of the RecurrentForgetMult operator test """
-        print(FT)
-
         # Create input variables
         x = np.random.random(size=[1, 1, 1]).astype(FT)
         forget = np.random.random(size=[1, 1, 1]).astype(FT)

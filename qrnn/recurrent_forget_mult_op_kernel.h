@@ -3,7 +3,7 @@
 
 #include <cuda_runtime.h>
 
-void RecurrentForgetMultLauncher(float *dst, const float *f, const float *x, int SEQ, int BATCH, int HIDDEN);
-void BwdRecurrentForgetMultLauncher(const float *h, const float *f, const float *x, const float *gh, float *gf, float *gx, float *ghinit, int SEQ, int BATCH, int HIDDEN);
+void RecurrentForgetMultLauncher(float *dst, const float *f, const float *x, int SEQ, int BATCH, int HIDDEN, cudaStream_t stream);
+void BwdRecurrentForgetMultLauncher(const float *h, const float *f, const float *x, const float *gh, float *gf, float *gx, float *ghinit, int SEQ, int BATCH, int HIDDEN, cudaStream_t stream);
 
 #endif

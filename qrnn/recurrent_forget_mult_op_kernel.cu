@@ -1,6 +1,7 @@
 #include "recurrent_forget_mult_op_kernel.h"
 
-__global__ void recurrent_forget_mult(float *dst, const float *f, const float *x, int SEQ, int BATCH, int HIDDEN) {
+__global__
+void recurrent_forget_mult(float *dst, const float *f, const float *x, int SEQ, int BATCH, int HIDDEN) {
   /*
   Note: destination is assumed to be one timestep longer than f or x where dst[0] = h_{-1}
   This means dst array has a separate index than that of f or x
@@ -26,7 +27,8 @@ __global__ void recurrent_forget_mult(float *dst, const float *f, const float *x
   }
 }
 
-__global__ void bwd_recurrent_forget_mult(const float *h, const float *f, const float *x, const float *gh, float *gf, float *gx, float *ghinit, int SEQ, int BATCH, int HIDDEN) {
+__global__
+void bwd_recurrent_forget_mult(const float *h, const float *f, const float *x, const float *gh, float *gf, float *gx, float *ghinit, int SEQ, int BATCH, int HIDDEN) {
   /*
   Note: h is assumed to be one timestep longer than f, x, gf, gx, or gh where dst[0] = h_{-1}
   This means dst array has a separate index than that of f or x
@@ -54,10 +56,10 @@ __global__ void bwd_recurrent_forget_mult(const float *h, const float *f, const 
   ghinit[bid * HIDDEN + hid] = running_f;
 }
 
-void RecurrentForgetMultLauncher(float *dst, const float *f, const float *x, int SEQ, int BATCH, int HIDDEN) {
-  recurrent_forget_mult<<<32, 256>>>(dst, f, x, SEQ, BATCH, HIDDEN);
+void RecurrentForgetMultLauncher(float *dst, const float *f, const float *x, int SEQ, int BATCH, int HIDDEN, cudaStream_t stream) {
+  recurrent_forget_mult<<<32, 256, 0, stream>>>(dst, f, x, SEQ, BATCH, HIDDEN);
 }
 
-void BwdRecurrentForgetMultLauncher(const float *h, const float *f, const float *x, const float *gh, float *gf, float *gx, float *ghinit, int SEQ, int BATCH, int HIDDEN) {
-  bwd_recurrent_forget_mult<<<32, 256>>>(h, f, x, gh, gf, gx, ghinit, SEQ, BATCH, HIDDEN);
+void BwdRecurrentForgetMultLauncher(const float *h, const float *f, const float *x, const float *gh, float *gf, float *gx, float *ghinit, int SEQ, int BATCH, int HIDDEN, cudaStream_t stream) {
+  bwd_recurrent_forget_mult<<<32, 256, 0, stream>>>(h, f, x, gh, gf, gx, ghinit, SEQ, BATCH, HIDDEN);
 }
