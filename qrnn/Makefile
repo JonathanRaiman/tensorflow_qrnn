@@ -28,7 +28,7 @@ LIBRARY=qrnn.so
 # Compiler flags
 INCLUDES= -I $(TF_INC) $(GOOGLE_CUDA_INCLUDES)
 
-CPPFLAGS=-std=c++11 $(TF_FLAGS) $(INCLUDES) -fPIC -fopenmp -O2 -march=native -mtune=native $(GOOGLE_CUDA_FLAG)
+CPPFLAGS=-g -std=c++11 $(TF_FLAGS) $(INCLUDES) -fPIC -fopenmp -O2 -march=native -mtune=native $(GOOGLE_CUDA_FLAG)
 NVCCFLAGS=-std=c++11 -D GOOGLE_CUDA=$(TF_CUDA) $(TF_FLAGS) $(INCLUDES) \
 	-x cu --compiler-options "-fPIC" --gpu-architecture=sm_30 -lineinfo \
 	-Xcompiler -std=c++98

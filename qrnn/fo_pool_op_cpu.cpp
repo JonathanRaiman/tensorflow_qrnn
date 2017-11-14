@@ -1,9 +1,9 @@
-#include "recurrent_forget_mult_op_cpu.h"
+#include "fo_pool_op_cpu.h"
 
 #include "tensorflow/core/framework/shape_inference.h"
 
 TF_QRNN_NAMESPACE_BEGIN
-TF_QRNN_RECURRENT_FORGET_MULT_NAMESPACE_BEGIN
+TF_QRNN_FO_POOL_NAMESPACE_BEGIN
 
 using tensorflow::shape_inference::InferenceContext;
 using tensorflow::shape_inference::ShapeHandle;
@@ -29,20 +29,23 @@ auto shape_function = [](InferenceContext* c) {
         "forget must have shape [None, None, None] but is " +
         c->DebugString(in_forget));
 
-    // TODO: Supply a proper shapes for output variables here,
-    // usually derived from input shapes
-    ShapeHandle output_shape = c->MakeShape({
-         c->Dim(in_x, 0),
-         c->Dim(in_x, 1),
-         c->Dim(in_x, 2)});
+    std::vector<DimensionHandle> dims(3);
+    for (int i = 0; i < 3; i++) {
+        TF_RETURN_IF_ERROR(
+            c->Merge(c->Dim(in_x, i), c->Dim(in_forget, i), &dims[i]));
+    }
 
-    c->set_output(0, output_shape);
+    TF_RETURN_IF_ERROR(c->Add(c->Dim(in_x, 0),
+                              static_cast<tensorflow::int64>(1),
+                              &dims[0]));
+
+    c->set_output(0, c->MakeShape(dims));
     // printf("output shape %s\\n", c->DebugString(output_shape).c_str());;
     return Status::OK();
 };
 
-// Register the RecurrentForgetMult operator.
-REGISTER_OP("RecurrentForgetMult")
+// Register the FoPool operator.
+REGISTER_OP("FoPool")
     .Input("x: FT")
     .Input("forget: FT")
     .Output("output: FT")
@@ -51,13 +54,13 @@ REGISTER_OP("RecurrentForgetMult")
     .SetShapeFn(shape_function);
 
 
-// Register a CPU kernel for RecurrentForgetMult
+// Register a CPU kernel for FoPool
 // handling permutation ['float']
 REGISTER_KERNEL_BUILDER(
-    Name("RecurrentForgetMult")
+    Name("FoPool")
     .TypeConstraint<float>("FT")
     .Device(tensorflow::DEVICE_CPU),
-    RecurrentForgetMult<CPUDevice, float>);
+    FoPool<CPUDevice, float>);
 
-TF_QRNN_RECURRENT_FORGET_MULT_NAMESPACE_STOP
+TF_QRNN_FO_POOL_NAMESPACE_STOP
 TF_QRNN_NAMESPACE_STOP

@@ -37,6 +37,5 @@ python qrnn/test_recurrent_forget_mult.py
 
 ### TODOs
 
-- CPU implementation
 - Gradient tests
 - PyPi registration + setup.py file

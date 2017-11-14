@@ -1,3 +1,5 @@
 *.so
 *.o
 .d
+.DS_Store
+._.DS_Store
