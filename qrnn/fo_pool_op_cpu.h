@@ -22,7 +22,7 @@ typedef Eigen::ThreadPoolDevice CPUDevice;
 
 template<typename FT>
 void fo_pool(tensorflow::OpKernelContext* context,
-             FT *dst, const FT *f, const FT *x, int SEQ, int batch_size, int HIDDEN) {
+             FT *dst, const FT *f, const FT *x, const FT *initial_state, int SEQ, int batch_size, int HIDDEN) {
     /*
     Note: destination is assumed to be one timestep longer than f or x where dst[0] = h_{-1}
     This means dst array has a separate index than that of f or x
@@ -30,10 +30,10 @@ void fo_pool(tensorflow::OpKernelContext* context,
     auto worker_threads = *(context->device()->tensorflow_cpu_worker_threads());
     const tensorflow::int64 cost = SEQ * HIDDEN * 1000;
     Shard(worker_threads.num_threads, worker_threads.num_threads, batch_size, cost,
-         [&batch_size, x, f, dst, &HIDDEN, &SEQ](const int start, const int limit) {
+         [&batch_size, x, f, initial_state, dst, &HIDDEN, &SEQ](const int start, const int limit) {
         for (int batch_id = start; batch_id < limit; ++batch_id) {
             for (int hid = 0; hid < HIDDEN; hid++) {
-                dst[batch_id * HIDDEN + hid] = 0;
+                dst[batch_id * HIDDEN + hid] = initial_state[batch_id * HIDDEN + hid];
                 for (int ts = 0 + 1; ts < SEQ + 1; ts++) {
                     // Good sanity check for debugging - only perform additions to a zeroed chunk of memory
                     // Addition seems atomic or near atomic - you should get incorrect answers if doubling up via threads
@@ -55,7 +55,7 @@ void fo_pool(tensorflow::OpKernelContext* context,
 
 template<typename FT>
 void bwd_fo_pool(tensorflow::OpKernelContext* context,
-                 const FT *h, const FT *f, const FT *x, const FT *gh, FT *gf, FT *gx, FT *ghinit,
+                 const FT *h, const FT *f, const FT *x, const FT *gh, FT *gf, FT *gx, FT *ginitial_state,
                  int SEQ, int batch_size, int HIDDEN) {
     /*
     Note: h is assumed to be one timestep longer than f, x, gf, gx, or gh where dst[0] = h_{-1}
@@ -64,7 +64,7 @@ void bwd_fo_pool(tensorflow::OpKernelContext* context,
     auto worker_threads = *(context->device()->tensorflow_cpu_worker_threads());
     const tensorflow::int64 cost = SEQ * HIDDEN * 1000;
     Shard(worker_threads.num_threads, worker_threads.num_threads,
-          batch_size, cost, [&batch_size, h, f, x, gh, gf, gx, ghinit, &HIDDEN, &SEQ](const int start, const int limit) {
+          batch_size, cost, [&batch_size, h, f, x, gh, gf, gx, ginitial_state, &HIDDEN, &SEQ](const int start, const int limit) {
         for (int batch_id = start; batch_id < limit; ++batch_id) {
             for (int hid = 0; hid < HIDDEN; hid++) {
                 double running_f = 0;
@@ -82,7 +82,7 @@ void bwd_fo_pool(tensorflow::OpKernelContext* context,
                     // The line below is likely more numerically stable than (1 - f[i]) * running_f;
                     running_f       = running_f - f[i] * running_f;
                 }
-                ghinit[batch_id * HIDDEN + hid] = running_f;
+                ginitial_state[batch_id * HIDDEN + hid] = running_f;
             }
         }
     });
@@ -101,11 +101,13 @@ class FoPool<CPUDevice, FT> : public tensorflow::OpKernel {
             // Create reference to input Tensorflow tensors
             const auto & in_x = context->input(0);
             const auto & in_forget = context->input(1);
+            const auto & in_initial_state = context->input(2);
 
 
             // Extract Eigen tensors
             auto x = in_x.tensor<FT, 3>();
             auto forget = in_forget.tensor<FT, 3>();
+            auto initial_state = in_initial_state.tensor<FT, 2>();
 
             // Allocate output tensors
             // Allocate space for output tensor 'output'
@@ -120,9 +122,34 @@ class FoPool<CPUDevice, FT> : public tensorflow::OpKernel {
                     out.data(),
                     forget.data(),
                     x.data(),
+                    initial_state.data(),
                     in_x_shape.dim_size(0),
                     output_shape.dim_size(1),
                     output_shape.dim_size(2));
+        }
+};
+
+template <typename FT>
+class BwdFoPool<CPUDevice, FT> : public tensorflow::OpKernel {
+    public:
+        explicit BwdFoPool(tensorflow::OpKernelConstruction * context) :
+            tensorflow::OpKernel(context) {}
+
+        void Compute(tensorflow::OpKernelContext * context) override {
+            namespace tf = tensorflow;
+
+            // desired inputs to function:
+            // h, const FT *f, const FT *x, const FT *gh, FT *gf, FT *gx, FT *ginitial_state
+
+            const auto& in_h = context->input(0);
+            const auto& in_x = context->input(1);
+            const auto& in_f = context->input(2);
+            const auto& in_gh = context->input(3);
+
+            // outputs:
+            const auto& in_gf = context->input(4);
+            const auto& in_gx = context->input(5);
+            const auto& in_ginitial_state = context->input(6);
         }
 };
 

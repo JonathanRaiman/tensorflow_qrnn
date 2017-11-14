@@ -33,6 +33,7 @@ public:
         // Create variables for input tensors
         const auto & in_x = context->input(0);
         const auto & in_forget = context->input(1);
+        const auto & in_hinit = context->input(2);
 
         // Allocate output tensors
         // Allocate space for output tensor 'output'
@@ -46,6 +47,7 @@ public:
         // Get pointers to flattened tensor data buffers
         const auto fin_x = in_x.flat<FT>().data();
         const auto fin_forget = in_forget.flat<FT>().data();
+        const auto fin_hinit = in_hinit.flat<FT>().data();
         auto fout_output = output_ptr->flat<FT>().data();
 
 
@@ -53,11 +55,53 @@ public:
         const auto & device = context->eigen_device<GPUDevice>();
 
         // Call the qrnn_fo_pool CUDA kernel
-        FoPoolLauncher(fout_output, fin_forget, fin_x,
+        FoPoolLauncher(fout_output, fin_forget, fin_x, fin_hinit,
                        in_x_shape.dim_size(0),
                        output_shape.dim_size(1),
                        output_shape.dim_size(2),
                        device.stream());
+    }
+};
+
+template <typename FT>
+class BwdFoPool<GPUDevice, FT> : public tensorflow::OpKernel
+{
+public:
+    explicit BwdFoPool(tensorflow::OpKernelConstruction * context) :
+        tensorflow::OpKernel(context) {}
+
+    void Compute(tensorflow::OpKernelContext * context) override
+    {
+        namespace tf = tensorflow;
+
+        // // Create variables for input tensors
+        // const auto & in_x = context->input(0);
+        // const auto & in_forget = context->input(1);
+
+        // // Allocate output tensors
+        // // Allocate space for output tensor 'output'
+        // tf::Tensor * output_ptr = nullptr;
+        // auto in_x_shape = in_x.shape();
+        // tf::TensorShape output_shape = in_x_shape;
+        // output_shape.set_dim(0, output_shape.dim_size(0) + 1);
+        // OP_REQUIRES_OK(context, context->allocate_output(
+        //     0, output_shape, &output_ptr));
+
+        // // Get pointers to flattened tensor data buffers
+        // const auto fin_x = in_x.flat<FT>().data();
+        // const auto fin_forget = in_forget.flat<FT>().data();
+        // auto fout_output = output_ptr->flat<FT>().data();
+
+
+        // // Get the GPU device
+        // const auto & device = context->eigen_device<GPUDevice>();
+
+        // // Call the qrnn_fo_pool CUDA kernel
+        // BwdFoPoolLauncher(fout_output, fin_forget, fin_x,
+        //                   in_x_shape.dim_size(0),
+        //                   output_shape.dim_size(1),
+        //                   output_shape.dim_size(2),
+        //                   device.stream());
     }
 };
 

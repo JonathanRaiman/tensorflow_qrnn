@@ -1,7 +1,7 @@
 #include "fo_pool_op_kernel.h"
 
 __global__
-void fo_pool(float *dst, const float *f, const float *x, int SEQ, int batch_size, int HIDDEN) {
+void fo_pool(float *dst, const float *f, const float *x, const float *initial_state, int SEQ, int batch_size, int HIDDEN) {
     /*
     Note: destination is assumed to be one timestep longer than f or x where dst[0] = h_{-1}
     This means dst array has a separate index than that of f or x
@@ -11,7 +11,7 @@ void fo_pool(float *dst, const float *f, const float *x, int SEQ, int batch_size
     if (hid >= HIDDEN || bid >= batch_size)
         return;
     //
-    dst[bid * HIDDEN + hid] = 0;
+    dst[bid * HIDDEN + hid] = initial_state[bid * HIDDEN + hid];
     for (int ts = 0 + 1; ts < SEQ + 1; ts++) {
         // Good sanity check for debugging - only perform additions to a zeroed chunk of memory
         // Addition seems atomic or near atomic - you should get incorrect answers if doubling up via threads
@@ -29,7 +29,7 @@ void fo_pool(float *dst, const float *f, const float *x, int SEQ, int batch_size
 }
 
 __global__
-void bwd_fo_pool(const float *h, const float *f, const float *x, const float *gh, float *gf, float *gx, float *ghinit, int SEQ, int batch_size, int HIDDEN) {
+void bwd_fo_pool(const float *h, const float *f, const float *x, const float *gh, float *gf, float *gx, float *ginitial_state, int SEQ, int batch_size, int HIDDEN) {
     /*
     Note: h is assumed to be one timestep longer than f, x, gf, gx, or gh where dst[0] = h_{-1}
     This means dst array has a separate index than that of f or x
@@ -54,19 +54,19 @@ void bwd_fo_pool(const float *h, const float *f, const float *x, const float *gh
         // The line below is likely more numerically stable than (1 - f[i]) * running_f;
         running_f       = running_f - f[i] * running_f;
     }
-    ghinit[bid * HIDDEN + hid] = running_f;
+    ginitial_state[bid * HIDDEN + hid] = running_f;
 }
 
-void FoPoolLauncher(float *dst, const float *f, const float *x, int SEQ, int batch_size, int HIDDEN, cudaStream_t stream) {
+void FoPoolLauncher(float *dst, const float *f, const float *x, const float *initial_state, int SEQ, int batch_size, int HIDDEN, cudaStream_t stream) {
     int grid_hidden_size = min(HIDDEN, 512);
     dim3 grid(std::ceil(double(HIDDEN / double(grid_hidden_size))), batch_size, 1);
     dim3 blocks(grid_hidden_size, 1, 1);
-    fo_pool<<<grid, blocks, 0, stream>>>(dst, f, x, SEQ, batch_size, HIDDEN);
+    fo_pool<<<grid, blocks, 0, stream>>>(dst, f, x, initial_state, SEQ, batch_size, HIDDEN);
 }
 
-void BwdFoPoolLauncher(const float *h, const float *f, const float *x, const float *gh, float *gf, float *gx, float *ghinit, int SEQ, int batch_size, int HIDDEN, cudaStream_t stream) {
+void BwdFoPoolLauncher(const float *h, const float *f, const float *x, const float *gh, float *gf, float *gx, float *ginitial_state, int SEQ, int batch_size, int HIDDEN, cudaStream_t stream) {
     int grid_hidden_size = min(HIDDEN, 512);
     dim3 grid(std::ceil(double(HIDDEN / double(grid_hidden_size))), batch_size, 1);
     dim3 blocks(grid_hidden_size, 1, 1);
-    bwd_fo_pool<<<grid, blocks, 0, stream>>>(h, f, x, gh, gf, gx, ghinit, SEQ, batch_size, HIDDEN);
+    bwd_fo_pool<<<grid, blocks, 0, stream>>>(h, f, x, gh, gf, gx, ginitial_state, SEQ, batch_size, HIDDEN);
 }

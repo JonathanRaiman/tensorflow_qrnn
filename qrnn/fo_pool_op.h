@@ -13,13 +13,16 @@ TF_QRNN_NAMESPACE_BEGIN
 TF_QRNN_FO_POOL_NAMESPACE_BEGIN
 
 // General definition of the FoPool op, which will be specialised in:
-//   - FO_POOL_op_cpu.h for CPUs
-//   - FO_POOL_op_gpu.cuh for CUDA devices
+//   - fo_pool_op_cpu.h for CPUs
+//   - fo_pool_op_gpu.cuh for CUDA devices
 // Concrete template instantions of this class are provided in:
-//   - FO_POOL_op_cpu.cpp for CPUs
-//   - FO_POOL_op_gpu.cu for CUDA devices
+//   - fo_pool_op_cpu.cpp for CPUs
+//   - fo_pool_op_gpu.cu for CUDA devices
 template <typename Device, typename FT>
 class FoPool {};
+
+template <typename Device, typename FT>
+class BwdFoPool {};
 
 TF_QRNN_FO_POOL_NAMESPACE_STOP
 TF_QRNN_NAMESPACE_STOP

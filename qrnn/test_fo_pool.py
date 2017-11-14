@@ -7,9 +7,10 @@ from os.path import join, dirname, realpath
 
 SCRIPT_DIR = dirname(realpath(__file__))
 
-def run_slow_fo_pooling(x, forget):
+def np_fo_pooling(x, forget, initial_state):
     timesteps, batch, hidden = x.shape
     dst = np.zeros((timesteps + 1, batch, hidden), dtype=x.dtype)
+    dst[0] = initial_state
     for ts in range(1, timesteps + 1):
         dst[ts] = (forget[ts - 1]         * x[ts - 1] +
                    (1.0 - forget[ts - 1]) * dst[ts - 1])
@@ -44,12 +45,12 @@ class TestFoPool(unittest.TestCase):
         output_shape = (timesteps + 1, batch_size, channels)
         x = np.random.random(size=shape).astype(FT)
         forget = np.random.uniform(0, 1, size=shape).astype(FT)
-
+        initial_state = np.random.random(size=(batch_size, channels)).astype(FT)
 
         # Argument list
-        np_args = [x, forget]
+        np_args = [x, forget, initial_state]
         # Argument string name list
-        arg_names = ["x", "forget"]
+        arg_names = ["x", "forget", "initial_state"]
         # Constructor tensorflow variables
         tf_args = [tf.Variable(v, name=n) for v, n in zip(np_args, arg_names)]
 
@@ -75,7 +76,7 @@ class TestFoPool(unittest.TestCase):
             for gpu_result in gpu_results:
                 self.assertEqual(gpu_result.shape, output_shape)
 
-            slow_result = run_slow_fo_pooling(x, forget)
+            slow_result = np_fo_pooling(x, forget, initial_state)
             self.assertTrue(np.allclose(cpu_result, slow_result))
             for gpu_result in gpu_results:
                 self.assertTrue(np.allclose(gpu_result, slow_result))

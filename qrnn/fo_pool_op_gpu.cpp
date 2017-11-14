@@ -6,7 +6,6 @@
 TF_QRNN_NAMESPACE_BEGIN
 TF_QRNN_FO_POOL_NAMESPACE_BEGIN
 
-
 // Register a GPU kernel for FoPool
 // handling permutation ['float']
 REGISTER_KERNEL_BUILDER(
@@ -14,6 +13,12 @@ REGISTER_KERNEL_BUILDER(
     .TypeConstraint<float>("FT")
     .Device(tensorflow::DEVICE_GPU),
     FoPool<GPUDevice, float>);
+
+REGISTER_KERNEL_BUILDER(
+    Name("BwdFoPool")
+    .TypeConstraint<float>("FT")
+    .Device(tensorflow::DEVICE_GPU),
+    BwdFoPool<GPUDevice, float>);
 
 TF_QRNN_FO_POOL_NAMESPACE_STOP
 TF_QRNN_NAMESPACE_STOP
