@@ -82,7 +82,7 @@ void bwd_fo_pool(tensorflow::OpKernelContext* context,
                     // The line below is likely more numerically stable than (1 - f[i]) * running_f;
                     running_f       = running_f - f[i] * running_f;
                 }
-                ginitial_state[batch_id * HIDDEN + hid] = running_f;
+                ginitial_state[batch_id * HIDDEN + hid] = running_f + gh[batch_id * HIDDEN + hid];
             }
         }
     });
@@ -105,9 +105,9 @@ class FoPool<CPUDevice, FT> : public tensorflow::OpKernel {
 
 
             // Extract Eigen tensors
-            auto x = in_x.tensor<FT, 3>();
-            auto forget = in_forget.tensor<FT, 3>();
-            auto initial_state = in_initial_state.tensor<FT, 2>();
+            auto x = in_x.flat<FT>().data();
+            auto forget = in_forget.flat<FT>().data();
+            auto initial_state = in_initial_state.flat<FT>().data();
 
             // Allocate output tensors
             // Allocate space for output tensor 'output'
@@ -117,12 +117,12 @@ class FoPool<CPUDevice, FT> : public tensorflow::OpKernel {
             output_shape.set_dim(0, output_shape.dim_size(0) + 1);
             OP_REQUIRES_OK(context, context->allocate_output(
                 0, output_shape, &output_ptr));
-            auto out = output_ptr->tensor<FT, 3>();
+            auto out = output_ptr->flat<FT>().data();
             fo_pool(context,
-                    out.data(),
-                    forget.data(),
-                    x.data(),
-                    initial_state.data(),
+                    out,
+                    forget,
+                    x,
+                    initial_state,
                     in_x_shape.dim_size(0),
                     output_shape.dim_size(1),
                     output_shape.dim_size(2));
@@ -143,13 +143,47 @@ class BwdFoPool<CPUDevice, FT> : public tensorflow::OpKernel {
 
             const auto& in_h = context->input(0);
             const auto& in_x = context->input(1);
-            const auto& in_f = context->input(2);
+            const auto& in_forget = context->input(2);
             const auto& in_gh = context->input(3);
 
-            // outputs:
-            const auto& in_gf = context->input(4);
-            const auto& in_gx = context->input(5);
-            const auto& in_ginitial_state = context->input(6);
+            // Extract Eigen tensors
+            auto h = in_h.flat<FT>().data();
+            auto x = in_x.flat<FT>().data();
+            auto forget = in_forget.flat<FT>().data();
+            auto gh = in_gh.flat<FT>().data();
+
+            // Allocate output tensors
+            // Allocate space for output tensor 'output'
+            tf::Tensor * out_gx = nullptr;
+            tf::Tensor * out_gf = nullptr;
+            tf::Tensor * out_ginitial_state = nullptr;
+
+            auto in_x_shape = in_x.shape();
+            tf::TensorShape grad_shape = in_x_shape;
+            tf::TensorShape ginitial_state_shape({in_x_shape.dim_size(1),
+                                                  in_x_shape.dim_size(2)});
+
+            OP_REQUIRES_OK(context, context->allocate_output(
+                0, grad_shape, &out_gx));
+            OP_REQUIRES_OK(context, context->allocate_output(
+                1, grad_shape, &out_gf));
+            OP_REQUIRES_OK(context, context->allocate_output(
+                2, ginitial_state_shape, &out_ginitial_state));
+            auto gx = out_gx->flat<FT>().data();
+            auto gf = out_gf->flat<FT>().data();
+            auto ginitial_state = out_ginitial_state->flat<FT>().data();
+
+            bwd_fo_pool(context,
+                        h,
+                        forget,
+                        x,
+                        gh,
+                        gf,
+                        gx,
+                        ginitial_state,
+                        grad_shape.dim_size(0),
+                        grad_shape.dim_size(1),
+                        grad_shape.dim_size(2));
         }
 };
 

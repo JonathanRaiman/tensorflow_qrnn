@@ -23,7 +23,7 @@ endif
 
 # Define objects and shared_library
 OBJECTS=$(addsuffix .o, $(basename $(SOURCES)))
-LIBRARY=qrnn.so
+LIBRARY=qrnn_lib.so
 
 # Compiler flags
 INCLUDES= -I $(TF_INC) $(GOOGLE_CUDA_INCLUDES)

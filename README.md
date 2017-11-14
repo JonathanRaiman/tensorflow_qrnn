@@ -32,10 +32,10 @@ The original PyTorch implementation of the QRNN can be found [here](https://gith
 ### Testing
 
 ```
-python qrnn/test_recurrent_forget_mult.py
+python qrnn/test_fo_pool.py
 ```
 
 ### TODOs
 
-- Gradient tests
+- pass gradient check
 - PyPi registration + setup.py file

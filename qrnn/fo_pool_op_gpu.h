@@ -74,34 +74,52 @@ public:
     {
         namespace tf = tensorflow;
 
-        // // Create variables for input tensors
-        // const auto & in_x = context->input(0);
-        // const auto & in_forget = context->input(1);
+        const auto& in_h = context->input(0);
+        const auto& in_x = context->input(1);
+        const auto& in_forget = context->input(2);
+        const auto& in_gh = context->input(3);
 
-        // // Allocate output tensors
-        // // Allocate space for output tensor 'output'
-        // tf::Tensor * output_ptr = nullptr;
-        // auto in_x_shape = in_x.shape();
-        // tf::TensorShape output_shape = in_x_shape;
-        // output_shape.set_dim(0, output_shape.dim_size(0) + 1);
-        // OP_REQUIRES_OK(context, context->allocate_output(
-        //     0, output_shape, &output_ptr));
+        // Extract Eigen tensors
+        auto h = in_h.flat<FT>().data();
+        auto x = in_x.flat<FT>().data();
+        auto forget = in_forget.flat<FT>().data();
+        auto gh = in_gh.flat<FT>().data();
 
-        // // Get pointers to flattened tensor data buffers
-        // const auto fin_x = in_x.flat<FT>().data();
-        // const auto fin_forget = in_forget.flat<FT>().data();
-        // auto fout_output = output_ptr->flat<FT>().data();
+        // Allocate output tensors
+        // Allocate space for output tensor 'output'
+        tf::Tensor * out_gf = nullptr;
+        tf::Tensor * out_gx = nullptr;
+        tf::Tensor * out_ginitial_state = nullptr;
 
+        auto in_x_shape = in_x.shape();
+        tf::TensorShape grad_shape = in_x_shape;
+        tf::TensorShape ginitial_state_shape({in_x_shape.dim_size(1),
+                                              in_x_shape.dim_size(2)});
 
-        // // Get the GPU device
-        // const auto & device = context->eigen_device<GPUDevice>();
+        OP_REQUIRES_OK(context, context->allocate_output(
+            0, grad_shape, &out_gx));
+        OP_REQUIRES_OK(context, context->allocate_output(
+            1, grad_shape, &out_gf));
+        OP_REQUIRES_OK(context, context->allocate_output(
+            2, ginitial_state_shape, &out_ginitial_state));
+        auto gf = out_gf->flat<FT>().data();
+        auto gx = out_gx->flat<FT>().data();
+        auto ginitial_state = out_ginitial_state->flat<FT>().data();
 
-        // // Call the qrnn_fo_pool CUDA kernel
-        // BwdFoPoolLauncher(fout_output, fin_forget, fin_x,
-        //                   in_x_shape.dim_size(0),
-        //                   output_shape.dim_size(1),
-        //                   output_shape.dim_size(2),
-        //                   device.stream());
+        // Get the GPU device
+        const auto & device = context->eigen_device<GPUDevice>();
+
+        BwdFoPoolLauncher(h,
+                          forget,
+                          x,
+                          gh,
+                          gf,
+                          gx,
+                          ginitial_state,
+                          grad_shape.dim_size(0),
+                          grad_shape.dim_size(1),
+                          grad_shape.dim_size(2),
+                          device.stream());
     }
 };
 
