@@ -20,14 +20,12 @@ typedef Eigen::GpuDevice GPUDevice;
 
 // Specialise the FoPool op for GPUs
 template <typename FT>
-class FoPool<GPUDevice, FT> : public tensorflow::OpKernel
-{
+class FoPool<GPUDevice, FT> : public tensorflow::OpKernel {
 public:
     explicit FoPool(tensorflow::OpKernelConstruction * context) :
         tensorflow::OpKernel(context) {}
 
-    void Compute(tensorflow::OpKernelContext * context) override
-    {
+    void Compute(tensorflow::OpKernelContext * context) override {
         namespace tf = tensorflow;
 
         // Create variables for input tensors
@@ -55,7 +53,7 @@ public:
         const auto & device = context->eigen_device<GPUDevice>();
 
         // Call the qrnn_fo_pool CUDA kernel
-        FoPoolLauncher(fout_output, fin_forget, fin_x, fin_hinit,
+        FoPoolLauncher(fout_output, fin_x, fin_forget, fin_hinit,
                        in_x_shape.dim_size(0),
                        output_shape.dim_size(1),
                        output_shape.dim_size(2),
@@ -64,14 +62,12 @@ public:
 };
 
 template <typename FT>
-class BwdFoPool<GPUDevice, FT> : public tensorflow::OpKernel
-{
+class BwdFoPool<GPUDevice, FT> : public tensorflow::OpKernel {
 public:
     explicit BwdFoPool(tensorflow::OpKernelConstruction * context) :
         tensorflow::OpKernel(context) {}
 
-    void Compute(tensorflow::OpKernelContext * context) override
-    {
+    void Compute(tensorflow::OpKernelContext * context) override {
         namespace tf = tensorflow;
 
         const auto& in_h = context->input(0);
@@ -110,11 +106,11 @@ public:
         const auto & device = context->eigen_device<GPUDevice>();
 
         BwdFoPoolLauncher(h,
-                          forget,
                           x,
+                          forget,
                           gh,
-                          gf,
                           gx,
+                          gf,
                           ginitial_state,
                           grad_shape.dim_size(0),
                           grad_shape.dim_size(1),

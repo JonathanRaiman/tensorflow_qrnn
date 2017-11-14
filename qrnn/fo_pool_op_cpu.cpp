@@ -57,7 +57,7 @@ REGISTER_OP("FoPool")
     .Input("forget: FT")
     .Input("initial_state: FT")
     .Output("output: FT")
-    .Attr("FT: {float} = DT_FLOAT")
+    .Attr("FT: {float, double} = DT_FLOAT")
     .Doc(R"doc(QRNN fo_pool operation.)doc")
     .SetShapeFn(fo_pool_shape_function);
 
@@ -66,6 +66,12 @@ REGISTER_KERNEL_BUILDER(
     .TypeConstraint<float>("FT")
     .Device(tensorflow::DEVICE_CPU),
     FoPool<CPUDevice, float>);
+
+REGISTER_KERNEL_BUILDER(
+    Name("FoPool")
+    .TypeConstraint<double>("FT")
+    .Device(tensorflow::DEVICE_CPU),
+    FoPool<CPUDevice, double>);
 
 auto bwd_fo_pool_shape_function = [](InferenceContext* c) {
     // Dummies for tests
@@ -110,7 +116,7 @@ REGISTER_OP("BwdFoPool")
     .Output("gx: FT")
     .Output("gf: FT")
     .Output("ginitial_state: FT")
-    .Attr("FT: {float} = DT_FLOAT")
+    .Attr("FT: {float, double} = DT_FLOAT")
     .Doc(R"doc(QRNN fo_pool gradient operation.)doc")
     .SetShapeFn(bwd_fo_pool_shape_function);
 
@@ -119,6 +125,12 @@ REGISTER_KERNEL_BUILDER(
     .TypeConstraint<float>("FT")
     .Device(tensorflow::DEVICE_CPU),
     BwdFoPool<CPUDevice, float>);
+
+REGISTER_KERNEL_BUILDER(
+    Name("BwdFoPool")
+    .TypeConstraint<double>("FT")
+    .Device(tensorflow::DEVICE_CPU),
+    BwdFoPool<CPUDevice, double>);
 
 
 TF_QRNN_FO_POOL_NAMESPACE_STOP

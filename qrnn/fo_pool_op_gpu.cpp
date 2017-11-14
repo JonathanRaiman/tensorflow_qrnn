@@ -20,6 +20,18 @@ REGISTER_KERNEL_BUILDER(
     .Device(tensorflow::DEVICE_GPU),
     BwdFoPool<GPUDevice, float>);
 
+REGISTER_KERNEL_BUILDER(
+    Name("FoPool")
+    .TypeConstraint<double>("FT")
+    .Device(tensorflow::DEVICE_GPU),
+    FoPool<GPUDevice, double>);
+
+REGISTER_KERNEL_BUILDER(
+    Name("BwdFoPool")
+    .TypeConstraint<double>("FT")
+    .Device(tensorflow::DEVICE_GPU),
+    BwdFoPool<GPUDevice, double>);
+
 TF_QRNN_FO_POOL_NAMESPACE_STOP
 TF_QRNN_NAMESPACE_STOP
 

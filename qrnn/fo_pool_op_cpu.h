@@ -22,7 +22,7 @@ typedef Eigen::ThreadPoolDevice CPUDevice;
 
 template<typename FT>
 void fo_pool(tensorflow::OpKernelContext* context,
-             FT *dst, const FT *f, const FT *x, const FT *initial_state, int SEQ, int batch_size, int HIDDEN) {
+             FT *dst, const FT *x, const FT *f, const FT *initial_state, int SEQ, int batch_size, int HIDDEN) {
     /*
     Note: destination is assumed to be one timestep longer than f or x where dst[0] = h_{-1}
     This means dst array has a separate index than that of f or x
@@ -55,7 +55,7 @@ void fo_pool(tensorflow::OpKernelContext* context,
 
 template<typename FT>
 void bwd_fo_pool(tensorflow::OpKernelContext* context,
-                 const FT *h, const FT *f, const FT *x, const FT *gh, FT *gf, FT *gx, FT *ginitial_state,
+                 const FT *h, const FT *x, const FT *f, const FT *gh, FT *gx, FT *gf, FT *ginitial_state,
                  int SEQ, int batch_size, int HIDDEN) {
     /*
     Note: h is assumed to be one timestep longer than f, x, gf, gx, or gh where dst[0] = h_{-1}
@@ -78,11 +78,10 @@ void bwd_fo_pool(tensorflow::OpKernelContext* context,
                     gx[i]           = f[i] * running_f;
                     // Gradient of F
                     gf[i]           = (x[i] - h[dst_iminus1]) * running_f;
-                    //
                     // The line below is likely more numerically stable than (1 - f[i]) * running_f;
                     running_f       = running_f - f[i] * running_f;
                 }
-                ginitial_state[batch_id * HIDDEN + hid] = running_f + gh[batch_id * HIDDEN + hid];
+                ginitial_state[batch_id * HIDDEN + hid] = running_f;// + gh[batch_id * HIDDEN + hid];
             }
         }
     });
@@ -120,8 +119,8 @@ class FoPool<CPUDevice, FT> : public tensorflow::OpKernel {
             auto out = output_ptr->flat<FT>().data();
             fo_pool(context,
                     out,
-                    forget,
                     x,
+                    forget,
                     initial_state,
                     in_x_shape.dim_size(0),
                     output_shape.dim_size(1),
@@ -175,11 +174,11 @@ class BwdFoPool<CPUDevice, FT> : public tensorflow::OpKernel {
 
             bwd_fo_pool(context,
                         h,
-                        forget,
                         x,
+                        forget,
                         gh,
-                        gf,
                         gx,
+                        gf,
                         ginitial_state,
                         grad_shape.dim_size(0),
                         grad_shape.dim_size(1),
