@@ -7,7 +7,7 @@ from tensorflow.python.client import device_lib
 from tensorflow.python.ops import gradient_checker
 from tensorflow.python.framework import constant_op
 
-from qrnn import fo_pool
+from qrnn import fo_pool, fo_pool_unsliced
 
 def np_fo_pooling(x, forget, initial_state):
     timesteps, batch, hidden = x.shape
@@ -16,25 +16,7 @@ def np_fo_pooling(x, forget, initial_state):
     for ts in range(1, timesteps + 1):
         dst[ts] = (forget[ts - 1]         * x[ts - 1] +
                    (1.0 - forget[ts - 1]) * dst[ts - 1])
-    return dst[1:]
-
-
-def finite_difference_grad(op, variables, delta=1e-4):
-    grads = []
-    for var in variables:
-        grad = np.zeros_like(var)
-        grad_flat = grad.reshape(-1)
-        var_flat = var.reshape(-1)
-        for i in range(len(var_flat)):
-            prev = var_flat[i]
-            var_flat[i] = prev - delta
-            fmin = op().sum()
-            var_flat[i] = prev + delta
-            fmax = op().sum()
-            var_flat[i] = prev
-            grad_flat[i] = (fmax - fmin) / (2 * delta)
-        grads.append(grad)
-    return grads
+    return dst
 
 
 class TestFoPool(unittest.TestCase):
@@ -93,58 +75,35 @@ class TestFoPool(unittest.TestCase):
             gpu_results = S.run(gpu_ops)
             for gpu_result in gpu_results:
                 self.assertEqual(gpu_result.shape, shape)
-
-            slow_result = np_fo_pooling(x, forget, initial_state)
-
-            self.assertTrue(np.allclose(cpu_result, slow_result))
+            expected = np_fo_pooling(x, forget, initial_state)[1:]
+            self.assertTrue(np.allclose(cpu_result, expected))
             for gpu_result in gpu_results:
-                self.assertTrue(np.allclose(gpu_result, slow_result))
+                self.assertTrue(np.allclose(gpu_result, expected))
 
     def test_fo_pool_grad(self):
         """ Test the FoPool Gradient operator """
         # List of type constraint for testing this operator
-        type_permutations = [np.float64]
+        type_permutations = [(np.float32, 1e-2), (np.float64, 1e-4)]
 
         # Run test with the type combinations above
-        for FT in type_permutations:
-            self._impl_test_fo_pool_grad(FT)
+        for FT, tolerance in type_permutations:
+            self._impl_test_fo_pool_grad(FT, tolerance)
 
 
-    def _impl_test_fo_pool_grad(self, FT):
-        # Create input variables
-        timesteps = 5
-        batch_size = 3
-        channels = 2
-        shape = (timesteps, batch_size, channels)
-
-        x_init = np.random.random(size=shape).astype(FT)
-        forget_init = np.random.uniform(0, 1, size=shape).astype(FT)
-        initial_state_init = np.random.random(size=(batch_size, channels)).astype(FT)
-
-        init_op = tf.global_variables_initializer()
-
+    def _impl_test_fo_pool_grad(self, FT, tolerance):
+        shape = (5, 3, 2)
+        np_args = [np.random.random(size=shape).astype(FT),
+                   np.random.uniform(0, 1, size=shape).astype(FT),
+                   np.random.random(size=shape[1:]).astype(FT)]
         with tf.Session() as S:
-            x = constant_op.constant(x_init, shape=x_init.shape, dtype=FT, name="x")
-            forget = constant_op.constant(forget_init, shape=forget_init.shape, dtype=FT, name="forget")
-            initial_state = constant_op.constant(initial_state_init, shape=initial_state_init.shape, dtype=FT, name="initial_state")
-            y = fo_pool(x, forget, initial_state)
-            grads = tf.gradients(y, [x, forget, initial_state])
-            S.run(init_op)
-            expected_grads = S.run(grads)
-            fd_grads = finite_difference_grad(lambda: np_fo_pooling(x_init, forget_init, initial_state_init),
-                [x_init, forget_init, initial_state_init])
-            for fd_grad, expected_grad in zip(fd_grads, expected_grads):
-                diff = fd_grad - expected_grad
-                print(np.mean(diff), np.max(diff), np.min(diff))
-
-            for d in self.gpu_devs + ["cpu"]:
+            tf_args = [constant_op.constant(arg, shape=arg.shape, dtype=FT) for arg in np_args]
+            y = tf.reduce_sum(fo_pool_unsliced(*tf_args))
+            for d in ["cpu"] + self.gpu_devs:
                 with tf.device(d):
                     err = gradient_checker.compute_gradient_error(
-                      [x, forget, initial_state],
-                      [shape, shape, shape[1:]],
-                      y, shape,
-                      x_init_value=[x_init, forget_init, initial_state_init])
-                self.assertLess(err, 1e-4)
+                      tf_args, [arg.shape for arg in np_args], y, [],
+                      x_init_value=np_args)
+                self.assertLess(err, tolerance)
 
 
 if __name__ == "__main__":
