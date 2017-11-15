@@ -1,10 +1,9 @@
 # Quasi-Recurrent Neural Network (QRNN) for Tensorflow
 
-(Work in progress)
+This repository contains a Tensorflow implementation of [Salesforce Research](https://einstein.ai/)'s [Quasi-Recurrent Neural Networks](https://arxiv.org/abs/1611.01576) paper. It supports batch-major or time-major inputs in single or double precision.
 
-This repository contains a Tensorflow implementation of [Salesforce Research](https://einstein.ai/)'s [Quasi-Recurrent Neural Networks](https://arxiv.org/abs/1611.01576) paper.
-
-The QRNN provides similar accuracy to the LSTM but can be betwen 2 and 17 times faster than the highly optimized NVIDIA cuDNN LSTM implementation depending on the use case.
+From the authors:
+> The QRNN provides similar accuracy to the LSTM but can be betwen 2 and 17 times faster than the highly optimized NVIDIA cuDNN LSTM implementation depending on the use case.
 
 To install, simply run:
 
@@ -37,5 +36,4 @@ python qrnn/test_fo_pool.py
 
 ### TODOs
 
-- pass gradient check
-- PyPi registration + setup.py file
+- PyPi registration & setup.py

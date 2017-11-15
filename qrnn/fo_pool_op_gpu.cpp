@@ -7,30 +7,59 @@ TF_QRNN_NAMESPACE_BEGIN
 TF_QRNN_FO_POOL_NAMESPACE_BEGIN
 
 // Register a GPU kernel for FoPool
-// handling permutation ['float']
+
+/* TIME MAJOR */
+
 REGISTER_KERNEL_BUILDER(
-    Name("FoPool")
+    Name("TimeMajorFoPool")
     .TypeConstraint<float>("FT")
     .Device(tensorflow::DEVICE_GPU),
-    FoPool<GPUDevice, float>);
+    FoPool<GPUDevice, float, true>);
 
 REGISTER_KERNEL_BUILDER(
-    Name("BwdFoPool")
+    Name("TimeMajorBwdFoPool")
     .TypeConstraint<float>("FT")
     .Device(tensorflow::DEVICE_GPU),
-    BwdFoPool<GPUDevice, float>);
+    BwdFoPool<GPUDevice, float, true>);
 
 REGISTER_KERNEL_BUILDER(
-    Name("FoPool")
+    Name("TimeMajorFoPool")
     .TypeConstraint<double>("FT")
     .Device(tensorflow::DEVICE_GPU),
-    FoPool<GPUDevice, double>);
+    FoPool<GPUDevice, double, true>);
 
 REGISTER_KERNEL_BUILDER(
-    Name("BwdFoPool")
+    Name("TimeMajorBwdFoPool")
     .TypeConstraint<double>("FT")
     .Device(tensorflow::DEVICE_GPU),
-    BwdFoPool<GPUDevice, double>);
+    BwdFoPool<GPUDevice, double, true>);
+
+/* BATCH MAJOR */
+
+REGISTER_KERNEL_BUILDER(
+    Name("BatchMajorFoPool")
+    .TypeConstraint<float>("FT")
+    .Device(tensorflow::DEVICE_GPU),
+    FoPool<GPUDevice, float, false>);
+
+REGISTER_KERNEL_BUILDER(
+    Name("BatchMajorBwdFoPool")
+    .TypeConstraint<float>("FT")
+    .Device(tensorflow::DEVICE_GPU),
+    BwdFoPool<GPUDevice, float, false>);
+
+REGISTER_KERNEL_BUILDER(
+    Name("BatchMajorFoPool")
+    .TypeConstraint<double>("FT")
+    .Device(tensorflow::DEVICE_GPU),
+    FoPool<GPUDevice, double, false>);
+
+REGISTER_KERNEL_BUILDER(
+    Name("BatchMajorBwdFoPool")
+    .TypeConstraint<double>("FT")
+    .Device(tensorflow::DEVICE_GPU),
+    BwdFoPool<GPUDevice, double, false>);
+
 
 TF_QRNN_FO_POOL_NAMESPACE_STOP
 TF_QRNN_NAMESPACE_STOP

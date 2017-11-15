@@ -18,9 +18,11 @@ TF_QRNN_FO_POOL_NAMESPACE_BEGIN
 // For simpler partial specialisation
 typedef Eigen::GpuDevice GPUDevice;
 
+/* TIME MAJOR */
+
 // Specialise the FoPool op for GPUs
-template <typename FT>
-class FoPool<GPUDevice, FT> : public tensorflow::OpKernel {
+template <typename FT, bool time_major>
+class FoPool<GPUDevice, FT, time_major> : public tensorflow::OpKernel {
 public:
     explicit FoPool(tensorflow::OpKernelConstruction * context) :
         tensorflow::OpKernel(context) {}
@@ -38,7 +40,11 @@ public:
         tf::Tensor * output_ptr = nullptr;
         auto in_x_shape = in_x.shape();
         tf::TensorShape output_shape = in_x_shape;
-        output_shape.set_dim(0, output_shape.dim_size(0) + 1);
+        if (time_major) {
+            output_shape.set_dim(0, output_shape.dim_size(0) + 1);
+        } else {
+            output_shape.set_dim(1, output_shape.dim_size(1) + 1);
+        }
         OP_REQUIRES_OK(context, context->allocate_output(
             0, output_shape, &output_ptr));
 
@@ -53,16 +59,25 @@ public:
         const auto & device = context->eigen_device<GPUDevice>();
 
         // Call the qrnn_fo_pool CUDA kernel
-        FoPoolLauncher(fout_output, fin_x, fin_forget, fin_hinit,
-                       in_x_shape.dim_size(0),
-                       output_shape.dim_size(1),
-                       output_shape.dim_size(2),
-                       device.stream());
+        if (time_major) {
+            TimeMajorFoPoolLauncher(fout_output, fin_x, fin_forget, fin_hinit,
+                                    in_x_shape.dim_size(0),
+                                    output_shape.dim_size(1),
+                                    output_shape.dim_size(2),
+                                    device.stream());
+        } else {
+            BatchMajorFoPoolLauncher(fout_output, fin_x, fin_forget, fin_hinit,
+                                     in_x_shape.dim_size(1),
+                                     output_shape.dim_size(0),
+                                     output_shape.dim_size(2),
+                                     device.stream());
+        }
     }
 };
 
-template <typename FT>
-class BwdFoPool<GPUDevice, FT> : public tensorflow::OpKernel {
+
+template <typename FT, bool time_major>
+class BwdFoPool<GPUDevice, FT, time_major> : public tensorflow::OpKernel {
 public:
     explicit BwdFoPool(tensorflow::OpKernelConstruction * context) :
         tensorflow::OpKernel(context) {}
@@ -89,7 +104,8 @@ public:
 
         auto in_x_shape = in_x.shape();
         tf::TensorShape grad_shape = in_x_shape;
-        tf::TensorShape ginitial_state_shape({in_x_shape.dim_size(1),
+        int batch_size = time_major ? in_x_shape.dim_size(1) : in_x_shape.dim_size(0);
+        tf::TensorShape ginitial_state_shape({batch_size,
                                               in_x_shape.dim_size(2)});
 
         OP_REQUIRES_OK(context, context->allocate_output(
@@ -105,17 +121,31 @@ public:
         // Get the GPU device
         const auto & device = context->eigen_device<GPUDevice>();
 
-        BwdFoPoolLauncher(h,
-                          x,
-                          forget,
-                          gh,
-                          gx,
-                          gf,
-                          ginitial_state,
-                          grad_shape.dim_size(0),
-                          grad_shape.dim_size(1),
-                          grad_shape.dim_size(2),
-                          device.stream());
+        if (time_major) {
+            TimeMajorBwdFoPoolLauncher(h,
+                                       x,
+                                       forget,
+                                       gh,
+                                       gx,
+                                       gf,
+                                       ginitial_state,
+                                       grad_shape.dim_size(0),
+                                       grad_shape.dim_size(1),
+                                       grad_shape.dim_size(2),
+                                       device.stream());
+        } else {
+            BatchMajorBwdFoPoolLauncher(h,
+                                        x,
+                                        forget,
+                                        gh,
+                                        gx,
+                                        gf,
+                                        ginitial_state,
+                                        grad_shape.dim_size(1),
+                                        grad_shape.dim_size(0),
+                                        grad_shape.dim_size(2),
+                                        device.stream());
+        }
     }
 };
 

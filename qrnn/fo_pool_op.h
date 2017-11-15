@@ -18,10 +18,10 @@ TF_QRNN_FO_POOL_NAMESPACE_BEGIN
 // Concrete template instantions of this class are provided in:
 //   - fo_pool_op_cpu.cpp for CPUs
 //   - fo_pool_op_gpu.cu for CUDA devices
-template <typename Device, typename FT>
+template <typename Device, typename FT, bool time_major>
 class FoPool {};
 
-template <typename Device, typename FT>
+template <typename Device, typename FT, bool time_major>
 class BwdFoPool {};
 
 TF_QRNN_FO_POOL_NAMESPACE_STOP
