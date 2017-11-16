@@ -8,6 +8,8 @@ from distutils.command.build_ext import build_ext
 from setuptools.command.develop import develop
 from setuptools.command.install import install
 import warnings
+import tempfile
+import subprocess
 
 import numpy as np
 import tensorflow as tf
@@ -97,6 +99,29 @@ def customize_compiler_for_nvcc(self):
     self._compile = _compile
 
 
+def check_openmp_presence():
+    source = """
+        #include <omp.h>
+        int main() {
+        #ifdef _OPENMP
+          return 0;
+        #else
+          breaks_on_purpose
+        #endif
+        }
+    """
+    with tempfile.NamedTemporaryFile() as foutput:
+        with tempfile.NamedTemporaryFile() as ftest:
+            with open(ftest.name, "wt") as fout:
+                fout.write(source)
+            try:
+                out = subprocess.check_output(["g++", ftest.name, "-o", foutput.name, "-fopenmp"])
+                return True
+            except subprocess.CalledProcessError:
+                return False
+
+
+
 # run the customize_compiler
 class custom_build_ext(build_ext):
     def build_extensions(self):
@@ -116,6 +141,7 @@ SRC_DIR = join(dirname(realpath(__file__)), "src")
 TF_LIB = tf.sysconfig.get_lib()
 TF_INCLUDE = tf.sysconfig.get_include()
 TF_CUDA = tf.test.is_built_with_cuda()
+HAS_OPENMP = check_openmp_presence()
 
 if TF_CUDA and CUDA is None:
     warnings.warn("qrnn can run on gpu, but nvcc was not found in your path. "
@@ -131,9 +157,13 @@ cpp_sources = list(find_files_by_suffix(SRC_DIR, ".cpp"))
 cmdclass = {}
 include_dirs = [np.get_include(), TF_INCLUDE, SRC_DIR, join(SRC_DIR, "third_party")]
 TF_FLAGS = ["-D_MWAITXINTRIN_H_INCLUDED", "-D_FORCE_INLINES", "-D_GLIBCXX_USE_CXX11_ABI=0"]
-gcc_extra_compile_args = ["-g", "-std=c++11", "-fPIC", "-fopenmp", "-O3", "-march=native", "-mtune=native"] + TF_FLAGS
+gcc_extra_compile_args = ["-g", "-std=c++11", "-fPIC", "-O3", "-march=native", "-mtune=native"] + TF_FLAGS
+
 nvcc_extra_compile_args = []
-extra_link_args = ["-fPIC", "-fopenmp"]
+extra_link_args = ["-fPIC"]
+if HAS_OPENMP:
+    gcc_extra_compile_args.append("-fopenmp")
+    extra_link_args.append("-fopenmp")
 
 if sys.platform == 'darwin':
     gcc_extra_compile_args.append('-stdlib=libc++')
@@ -178,7 +208,7 @@ setup(name='qrnn',
       # random metadata. there's more you can supploy
       author="Jonathan Raiman",
       author_email="jonathanraiman@gmail.com",
-      version="0.2.1",
+      version="0.2.2",
       install_requires=["numpy", "tensorflow>=1.4"],
       ext_modules = [ext],
       py_modules=["qrnn"],

@@ -1,2 +1,2 @@
-recursive-include src *.cpp *.h
+recursive-include src *.cpp *.h *.cu
 include src/Makefile
