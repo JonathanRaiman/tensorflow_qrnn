@@ -46,15 +46,16 @@ def locate_cuda():
         if nvcc is None:
             return None
         home = dirname(dirname(nvcc))
+        print(home)
     cudaconfig = {"nvcc": nvcc,
                   "include": [join(home, "include"), join(home, "include", "cuda")],
-                  "lib64": join(home, "lib64")}
+                  "lib64": [join(home, "lib64"), join(home, "lib")]}
     for k, v in cudaconfig.items():
         if isinstance(v, str):
             v = [v]
-        for path in v:
-            if not exists(path):
-                raise EnvironmentError("The CUDA %s path could not be located in %s" % (k, path))
+        all_missing = all(not exists(path) for path in v)
+        if all_missing:
+            raise EnvironmentError("The CUDA %s path could not be located in %r" % (k, v))
 
     return cudaconfig
 
@@ -128,41 +129,48 @@ cpp_sources = list(find_files_by_suffix(SRC_DIR, ".cpp"))
 
 
 cmdclass = {}
-include_dirs = [np.get_include(), TF_INCLUDE, SRC_DIR]
+include_dirs = [np.get_include(), TF_INCLUDE, SRC_DIR, join(SRC_DIR, "third_party")]
 TF_FLAGS = ["-D_MWAITXINTRIN_H_INCLUDED", "-D_FORCE_INLINES", "-D_GLIBCXX_USE_CXX11_ABI=0"]
 gcc_extra_compile_args = ["-g", "-std=c++11", "-fPIC", "-fopenmp", "-O3", "-march=native", "-mtune=native"] + TF_FLAGS
+nvcc_extra_compile_args = []
+extra_link_args = ["-fPIC", "-fopenmp"]
+
+if sys.platform == 'darwin':
+    gcc_extra_compile_args.append('-stdlib=libc++')
+    nvcc_extra_compile_args.append('-stdlib=libc++')
+    extra_link_args.append('-stdlib=libc++')
+else:
+    extra_link_args.append("-shared")
+
 
 if USE_CUDA:
     cmdclass["build_ext"] = custom_build_ext
     gcc_extra_compile_args.extend(["-D", "GOOGLE_CUDA"])
     include_dirs.extend(CUDA["include"])
-    nvcc_extra_compile_args = TF_FLAGS + ["-std=c++11", "-D", "GOOGLE_CUDA=1",
+    nvcc_extra_compile_args.extend(TF_FLAGS + ["-std=c++11", "-D", "GOOGLE_CUDA=1",
                                "-I", TF_INCLUDE,
                                "-x", "cu", "--compiler-options", "'-fPIC'",
                                "--gpu-architecture=sm_30", "-lineinfo",
-                               "-Xcompiler", "-std=c++98"] + ["-I" + path for path in CUDA["include"]]
+                               "-Xcompiler", "-std=c++98"] + ["-I" + path for path in CUDA["include"]])
+    extra_compile_args = {"gcc": gcc_extra_compile_args,
+                          "nvcc": nvcc_extra_compile_args}
+    runtime_library_dirs = CUDA['lib64']
 else:
     cu_sources = []
-    nvcc_extra_compile_args = []
+    extra_compile_args = gcc_extra_compile_args
+    runtime_library_dirs = []
 
-
-extra_link_args = ["-fPIC", "-fopenmp", "-shared"]
-if sys.platform == 'darwin':
-    gcc_extra_compile_args.append('-stdlib=libc++')
-    nvcc_extra_compile_args.append('-stdlib=libc++')
-    extra_link_args.append('-stdlib=libc++')
 
 ext = Extension("qrnn_lib",
                 sources=cu_sources + cpp_sources,
                 library_dirs=[TF_LIB],
                 libraries=["tensorflow_framework"],
                 language="c++",
-                runtime_library_dirs=[CUDA['lib64']],
+                runtime_library_dirs=runtime_library_dirs,
                 # this syntax is specific to this build system
                 # we're only going to use certain compiler args with nvcc and not with gcc
                 # the implementation of this trick is in customize_compiler() below
-                extra_compile_args={"gcc": gcc_extra_compile_args,
-                                    "nvcc": nvcc_extra_compile_args},
+                extra_compile_args=extra_compile_args,
                 extra_link_args=extra_link_args,
                 include_dirs=include_dirs)
 
