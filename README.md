@@ -7,7 +7,7 @@ From the authors:
 
 To install, simply run:
 
-`pip3 install tensorflow_qrnn`
+`pip3 install qrnn`
 
 If you use this code or their results in your research, you should cite:
 
@@ -31,9 +31,11 @@ The original PyTorch implementation of the QRNN can be found [here](https://gith
 ### Testing
 
 ```
-python qrnn/test_fo_pool.py
+python3 testing/test_fo_pool.py
 ```
 
-### TODOs
+### Known Issues:
 
-- PyPi registration
+Installation via PyPi currently does not correctly grab the generated .so file,
+so module will not have the functions inside. Current solution is to build from
+source without PyPi.

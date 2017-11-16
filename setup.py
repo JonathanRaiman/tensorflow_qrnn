@@ -178,9 +178,10 @@ setup(name='qrnn',
       # random metadata. there's more you can supploy
       author="Jonathan Raiman",
       author_email="jonathanraiman@gmail.com",
-      version="0.1",
+      version="0.2",
       install_requires=["numpy", "tensorflow>=1.4"],
       ext_modules = [ext],
       py_modules=["qrnn"],
       # inject our custom trigger
-      cmdclass=cmdclass)
+      cmdclass=cmdclass,
+      zip=False)
