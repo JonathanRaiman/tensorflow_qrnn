@@ -3,7 +3,14 @@ from os.path import join, dirname, realpath
 
 SCRIPT_DIR = dirname(realpath(__file__))
 
-qrnn_lib = tf.load_op_library(join(SCRIPT_DIR, "qrnn_lib.so"))
+def get_ext_filename(ext_name):
+    from distutils.sysconfig import get_config_var
+    ext_path = ext_name.split('.')
+    ext_suffix = get_config_var('EXT_SUFFIX')
+    return join(*ext_path) + ext_suffix
+
+
+qrnn_lib = tf.load_op_library(join(SCRIPT_DIR, get_ext_filename("qrnn_lib")))
 
 time_major_fo_pool_unsliced = qrnn_lib.time_major_fo_pool
 time_major_bwd_fo_pool = qrnn_lib.time_major_bwd_fo_pool

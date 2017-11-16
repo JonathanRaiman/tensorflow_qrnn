@@ -7,7 +7,7 @@ From the authors:
 
 To install, simply run:
 
-`pip install tensorflow_qrnn`
+`pip3 install tensorflow_qrnn`
 
 If you use this code or their results in your research, you should cite:
 
@@ -36,4 +36,4 @@ python qrnn/test_fo_pool.py
 
 ### TODOs
 
-- PyPi registration & setup.py
+- PyPi registration
