@@ -31,11 +31,9 @@ The original PyTorch implementation of the QRNN can be found [here](https://gith
 ### Testing
 
 ```
-python3 testing/test_fo_pool.py
+python3 test/test_fo_pool.py
 ```
 
-### Known Issues:
+### TODOs:
 
-Installation via PyPi currently does not correctly grab the generated .so file,
-so module will not have the functions inside. Current solution is to build from
-source without PyPi.
+- create wheels for Fedora, Ubuntu, etc...
